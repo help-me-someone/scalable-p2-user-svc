@@ -17,8 +17,8 @@ var users = map[string]string{
 
 func main() {
 	http.HandleFunc("/signin", SignInHanlder)
-	http.HandleFunc("/welcome", WelcomeHandler)
-	http.HandleFunc("/refresh", RefreshHandler)
+	http.HandleFunc("/welcome", NeedAuth(WelcomeHandler))
+	http.HandleFunc("/refresh", NeedAuth(RefreshHandler))
 	http.HandleFunc("/logout", LogoutHandler)
 
 	// start the server on port 8000

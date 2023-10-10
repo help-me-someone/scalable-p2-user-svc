@@ -2,8 +2,43 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 )
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Clear the cookie.
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Expires: time.Now(),
+	})
+}
+
+func RefreshHandler(w http.ResponseWriter, r *http.Request) {
+	claims, _ := ValidateJWTTOken(r)
+	// Only issue a new token once enough time has elapsed.
+	// In our case, we will renew when we're within 30 seconds
+	// of expiring.
+	if time.Until(claims.ExpiresAt.Time) > 30*time.Second {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Create a new token for the current use, with a renewed expiration time.
+	tokenString, expirationTime, err := RenewToken(claims)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Set the new token cookie for the user.
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   tokenString,
+		Expires: expirationTime,
+	})
+}
 
 func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
@@ -42,4 +77,10 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		Value:   tokenString,
 		Expires: expirationTime,
 	})
+}
+
+func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
+	// Login successful!
+	claims, _ := ValidateJWTTOken(r)
+	w.Write([]byte(fmt.Sprintf("Welcome %s!", claims.Username)))
 }

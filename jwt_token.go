@@ -9,7 +9,7 @@ import (
 )
 
 // Cookie lifetime, 15 minutes.
-const TOKEN_LIFE_TIME = 10
+const TOKEN_LIFE_TIME = 1
 
 func ValidateJWTTOken(r *http.Request) (*Claims, error) {
 	// Obtain the session token.
@@ -84,4 +84,27 @@ func RenewToken(claims *Claims) (string, time.Time, error) {
 	}
 
 	return tokenString, expirationTime, nil
+}
+
+// A decorator which makes sure that the user is logged in.
+func NeedAuth(handler Handler) Handler {
+	return func(wr http.ResponseWriter, re *http.Request) {
+		// Authenticate.
+		_, err := ValidateJWTTOken(re)
+		if err != nil {
+			switch err {
+			case http.ErrNoCookie:
+				wr.WriteHeader(http.StatusUnauthorized)
+			case jwt.ErrSignatureInvalid:
+				wr.WriteHeader(http.StatusUnauthorized)
+			case fmt.Errorf("Invalid token."): // This is kind of evil...
+				wr.WriteHeader(http.StatusUnauthorized)
+			default:
+				wr.WriteHeader(http.StatusBadRequest)
+			}
+			return
+		}
+
+		handler(wr, re)
+	}
 }
