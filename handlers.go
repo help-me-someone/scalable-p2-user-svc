@@ -33,6 +33,12 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	// of expiring.
 	if time.Until(claims.ExpiresAt.Time) > 30*time.Second {
 		w.WriteHeader(http.StatusBadRequest)
+		resp := map[string]interface{}{
+			"success": false,
+			"message": "token not expiring soon",
+		}
+
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
@@ -40,6 +46,12 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	tokenString, expirationTime, err := RenewToken(claims)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		resp := map[string]interface{}{
+			"success": false,
+			"message": err.Error(),
+		}
+
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
@@ -49,6 +61,13 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 		Value:   tokenString,
 		Expires: expirationTime,
 	})
+
+	resp := map[string]interface{}{
+		"success": true,
+		"message": "token replaced",
+	}
+
+	json.NewEncoder(w).Encode(resp)
 }
 
 func SignInHanlder(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +90,11 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		err := json.NewDecoder(r.Body).Decode(&creds)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			resp := map[string]interface{}{
+				"success": false,
+				"message": "unable to locate credentials",
+			}
+			json.NewEncoder(w).Encode(resp)
 			return
 		}
 	}
@@ -82,6 +106,11 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 	// else we return an "Unauthorized" access.
 	if !ok || expectedPassword != creds.Password {
 		w.WriteHeader(http.StatusUnauthorized)
+		resp := map[string]interface{}{
+			"success": false,
+			"message": "invalid username/password",
+		}
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
@@ -91,6 +120,11 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Error creating a JWT token, internal server error.
 		w.WriteHeader(http.StatusInternalServerError)
+		resp := map[string]interface{}{
+			"success": false,
+			"message": "failed to create token",
+		}
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
@@ -102,6 +136,13 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		Expires: expirationTime,
 	})
 
+	resp := map[string]interface{}{
+		"success": true,
+		"message": "logged in",
+		"user":    creds.Username,
+	}
+
+	json.NewEncoder(w).Encode(resp)
 }
 
 func WelcomeHandler(w http.ResponseWriter, r *http.Request) {

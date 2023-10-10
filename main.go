@@ -34,7 +34,7 @@ func main() {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:8000"},
 		AllowCredentials: true,
-		AllowedHeaders:   []string{"Hx-Current-Url", "Hx-Request", "Hx-Target", "Hx-Trigger"},
+		AllowedHeaders:   []string{"Hx-Current-Url", "Hx-Request", "Hx-Target", "Hx-Trigger", "Content-Type"},
 		// Enable Debugging for testing, consider disabling in production
 		Debug: true,
 	})
