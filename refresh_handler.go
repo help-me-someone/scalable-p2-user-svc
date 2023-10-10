@@ -34,10 +34,7 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a new token for the current use, with a renewed expiration time.
-	expirationTime := time.Now().Add(5 * time.Minute)
-	claims.ExpiresAt = jwt.NewNumericDate(expirationTime)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, expirationTime, err := RenewToken(claims)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
