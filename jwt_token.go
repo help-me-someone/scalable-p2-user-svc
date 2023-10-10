@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -15,11 +16,14 @@ func ValidateJWTTOken(r *http.Request) (*Claims, error) {
 	// Obtain the session token.
 	cookie, err := r.Cookie("token")
 	if err != nil {
+		log.Println("The cookie does not exist")
 		return nil, err
 	}
 
 	// Get the JWT string from the cookie
 	tokenString := cookie.Value
+
+	log.Printf("Cookie: %s\n", tokenString)
 
 	claims := &Claims{}
 

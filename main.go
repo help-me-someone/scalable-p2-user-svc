@@ -24,22 +24,19 @@ func main() {
 	mux.HandleFunc("/welcome", NeedAuth(WelcomeHandler))
 	mux.HandleFunc("/refresh", NeedAuth(RefreshHandler))
 	mux.HandleFunc("/logout", LogoutHandler)
+	mux.HandleFunc("/auth", IsAuthHandler)
 	mux.HandleFunc("/", NeedAuth(ForwardHandler))
 
 	// start the server on port 8000
 	log.Println("Serving on port 7887")
 
-	handler := cors.Default().Handler(mux)
-
-	c := cors.New(cors.Options{
+	handler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:8000"},
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"Hx-Current-Url", "Hx-Request", "Hx-Target", "Hx-Trigger", "Content-Type"},
 		// Enable Debugging for testing, consider disabling in production
 		Debug: true,
-	})
-
-	handler = c.Handler(handler)
+	}).Handler(mux)
 
 	log.Fatal(http.ListenAndServe(":7887", handler))
 }

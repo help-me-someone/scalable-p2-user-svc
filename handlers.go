@@ -3,15 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 )
-
-func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Content-Type", "text/html; charset=utf-8")
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-}
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -24,6 +20,27 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Name:    "token",
 		Expires: time.Now(),
 	})
+}
+
+func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
+	claims, err := ValidateJWTTOken(r)
+
+	if err != nil {
+		resp := map[string]interface{}{
+			"authenticated": false,
+		}
+
+		log.Println("INVALID USER!!!!!!!!!")
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	log.Printf("Valid user: %s\n", claims.Username)
+	resp := map[string]interface{}{
+		"authenticated": true,
+		"username":      claims.Username,
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func RefreshHandler(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +93,11 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	enableCors(&w)
+
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8000")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, withCredentials")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
 
 	var creds Credentials
 
@@ -131,16 +152,21 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 	// Set client's cookie for "token" as the JWT we generated, we also
 	// set the expiry time which is going to be same as the token.
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
-		Expires: expirationTime,
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 	})
 
 	resp := map[string]interface{}{
 		"success": true,
 		"message": "logged in",
 		"user":    creds.Username,
+		"cookie":  tokenString,
 	}
+
+	log.Printf("User logged in: %s\n", creds.Username)
 
 	json.NewEncoder(w).Encode(resp)
 }
