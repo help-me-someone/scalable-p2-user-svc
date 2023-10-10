@@ -9,7 +9,7 @@ import (
 )
 
 // Cookie lifetime, 15 minutes.
-const TOKEN_LIFE_TIME = 1
+const TOKEN_LIFE_TIME = 15
 
 func ValidateJWTTOken(r *http.Request) (*Claims, error) {
 	// Obtain the session token.

@@ -3,11 +3,18 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"time"
 )
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.NotFound(w, r)
+		return
+	}
+
 	// Clear the cookie.
 	http.SetCookie(w, &http.Cookie{
 		Name:    "token",
@@ -41,6 +48,11 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SignInHanlder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.NotFound(w, r)
+		return
+	}
+
 	var creds Credentials
 
 	// Decode the request body into credentials.
@@ -83,4 +95,25 @@ func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
 	// Login successful!
 	claims, _ := ValidateJWTTOken(r)
 	w.Write([]byte(fmt.Sprintf("Welcome %s!", claims.Username)))
+}
+
+// This is a reverse proxy.
+func ForwardHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	target, err := Target(path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	log.Printf("Forwading: %s --> %s\n", path, target)
+	targetUrl, err := url.Parse(target)
+	if err != nil {
+		log.Println("Failed to parse URL.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	Proxy(targetUrl).ServeHTTP(w, r)
+
 }

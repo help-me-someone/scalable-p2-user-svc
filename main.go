@@ -20,6 +20,7 @@ func main() {
 	http.HandleFunc("/welcome", NeedAuth(WelcomeHandler))
 	http.HandleFunc("/refresh", NeedAuth(RefreshHandler))
 	http.HandleFunc("/logout", LogoutHandler)
+	http.HandleFunc("/", NeedAuth(ForwardHandler))
 
 	// start the server on port 8000
 	log.Println("Serving on port 7887")
