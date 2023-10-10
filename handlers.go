@@ -3,11 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
 )
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Content-Type", "text/html; charset=utf-8")
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -48,19 +52,27 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SignInHanlder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
+	if r.Method != "POST" && r.Method != "OPTIONS" {
+
 		http.NotFound(w, r)
 		return
 	}
+	enableCors(&w)
 
 	var creds Credentials
 
-	// Decode the request body into credentials.
-	// Now we have username and password.
-	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	creds.Username = r.FormValue("username")
+	creds.Password = r.FormValue("password")
+
+	// If we can't get it from the form, then try JSON.
+	if len(creds.Password) == 0 || len(creds.Username) == 0 {
+		// Decode the request body into credentials.
+		// Now we have username and password.
+		err := json.NewDecoder(r.Body).Decode(&creds)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Get the expected password
@@ -89,6 +101,7 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		Value:   tokenString,
 		Expires: expirationTime,
 	})
+
 }
 
 func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -106,10 +119,8 @@ func ForwardHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Forwading: %s --> %s\n", path, target)
 	targetUrl, err := url.Parse(target)
 	if err != nil {
-		log.Println("Failed to parse URL.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

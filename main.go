@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/rs/cors"
 )
 
 // For simplicity, we will just declare a secret here.
@@ -11,18 +13,33 @@ var jwtKey = []byte("my_secret_key")
 
 // For simplification let's have a user entry stored in memory.
 var users = map[string]string{
-	"user1": "password1",
-	"user2": "password2",
+	"user1@gmail.com": "password1",
+	"user2@gmail.com": "password2",
 }
 
 func main() {
-	http.HandleFunc("/signin", SignInHanlder)
-	http.HandleFunc("/welcome", NeedAuth(WelcomeHandler))
-	http.HandleFunc("/refresh", NeedAuth(RefreshHandler))
-	http.HandleFunc("/logout", LogoutHandler)
-	http.HandleFunc("/", NeedAuth(ForwardHandler))
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/signin", SignInHanlder)
+	mux.HandleFunc("/welcome", NeedAuth(WelcomeHandler))
+	mux.HandleFunc("/refresh", NeedAuth(RefreshHandler))
+	mux.HandleFunc("/logout", LogoutHandler)
+	mux.HandleFunc("/", NeedAuth(ForwardHandler))
 
 	// start the server on port 8000
 	log.Println("Serving on port 7887")
-	log.Fatal(http.ListenAndServe(":7887", nil))
+
+	handler := cors.Default().Handler(mux)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:8000"},
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Hx-Current-Url", "Hx-Request", "Hx-Target", "Hx-Trigger"},
+		// Enable Debugging for testing, consider disabling in production
+		Debug: true,
+	})
+
+	handler = c.Handler(handler)
+
+	log.Fatal(http.ListenAndServe(":7887", handler))
 }
