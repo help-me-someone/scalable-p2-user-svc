@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -92,10 +91,9 @@ func RenewToken(claims *Claims) (string, time.Time, error) {
 }
 
 // A decorator which makes sure that the user is logged in.
-func NeedAuth(handler Handler) Handler {
+func AuthMiddleware(next Handler) Handler {
 	return func(wr http.ResponseWriter, re *http.Request) {
 		// Authenticate.
-		log.Println("=== Need Auth Middleware ===")
 		claims, err := ValidateJWTTOken(re)
 		if err != nil {
 			switch err {
@@ -111,10 +109,9 @@ func NeedAuth(handler Handler) Handler {
 			return
 		}
 
-		_ = claims
+		// We attach the username into the header so services can grab relevant information.
+		re.Header.Set("username", claims.Username)
 
-		message := "hello"
-		req := re.WithContext(context.WithValue(re.Context(), "message", message))
-		handler(wr, req)
+		next(wr, re)
 	}
 }

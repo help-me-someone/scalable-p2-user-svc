@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -27,16 +26,16 @@ func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 	claims, err := ValidateJWTTOken(r)
 
 	if err != nil {
+		log.Println("INVALID USER!!!!!!!!!")
 		resp := map[string]interface{}{
 			"authenticated": false,
 		}
-
-		log.Println("INVALID USER!!!!!!!!!")
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	log.Printf("Valid user: %s\n", claims.Username)
+
 	resp := map[string]interface{}{
 		"authenticated": true,
 		"username":      claims.Username,
@@ -177,8 +176,6 @@ func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
 func ForwardHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 
-	// Debug
-
 	target, err := Target(path)
 	if err != nil {
 		http.NotFound(w, r)
@@ -191,15 +188,5 @@ func ForwardHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Proxy to target: %s\n", target)
-	log.Printf("Passing user: %s\n", r.Context().Value("username"))
-
-	ctx := r.Context()
-	req := r.WithContext(context.WithValue(ctx, "message", "oh yeah"))
-	log.Printf("METHOD: %s\n", req.Method)
-	Proxy(targetUrl).ServeHTTP(w, req)
-	log.Printf("Passing user: %s\n", req.Context().Value("username"))
-	log.Printf("Passing message: %s\n", req.Context().Value("message"))
-	log.Println("Proxy sent")
-
+	Proxy(targetUrl).ServeHTTP(w, r)
 }
