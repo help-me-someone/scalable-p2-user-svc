@@ -27,7 +27,7 @@ func main() {
 	mux.HandleFunc("/auth", IsAuthHandler)
 	mux.HandleFunc("/", NeedAuth(ForwardHandler))
 
-	// start the server on port 8000
+	// start the server on port 7887
 	log.Println("Serving on port 7887")
 
 	handler := cors.New(cors.Options{
@@ -42,6 +42,9 @@ func main() {
 			"Hx-Request",
 			"Hx-Trigger",
 			"Content-Type",
+		},
+		AllowedMethods: []string{
+			"POST",
 		},
 
 		// Enable Debugging for testing, consider disabling in production

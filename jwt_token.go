@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -94,7 +95,8 @@ func RenewToken(claims *Claims) (string, time.Time, error) {
 func NeedAuth(handler Handler) Handler {
 	return func(wr http.ResponseWriter, re *http.Request) {
 		// Authenticate.
-		_, err := ValidateJWTTOken(re)
+		log.Println("=== Need Auth Middleware ===")
+		claims, err := ValidateJWTTOken(re)
 		if err != nil {
 			switch err {
 			case http.ErrNoCookie:
@@ -109,6 +111,10 @@ func NeedAuth(handler Handler) Handler {
 			return
 		}
 
-		handler(wr, re)
+		_ = claims
+
+		message := "hello"
+		req := re.WithContext(context.WithValue(re.Context(), "message", message))
+		handler(wr, req)
 	}
 }

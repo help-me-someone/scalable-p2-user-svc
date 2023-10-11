@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -94,11 +95,6 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8000")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, withCredentials")
-	w.Header().Set("Access-Control-Allow-Methods", "POST")
-
 	var creds Credentials
 
 	creds.Username = r.FormValue("username")
@@ -180,6 +176,9 @@ func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
 // This is a reverse proxy.
 func ForwardHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
+
+	// Debug
+
 	target, err := Target(path)
 	if err != nil {
 		http.NotFound(w, r)
@@ -192,6 +191,15 @@ func ForwardHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Proxy(targetUrl).ServeHTTP(w, r)
+	log.Printf("Proxy to target: %s\n", target)
+	log.Printf("Passing user: %s\n", r.Context().Value("username"))
+
+	ctx := r.Context()
+	req := r.WithContext(context.WithValue(ctx, "message", "oh yeah"))
+	log.Printf("METHOD: %s\n", req.Method)
+	Proxy(targetUrl).ServeHTTP(w, req)
+	log.Printf("Passing user: %s\n", req.Context().Value("username"))
+	log.Printf("Passing message: %s\n", req.Context().Value("message"))
+	log.Println("Proxy sent")
 
 }

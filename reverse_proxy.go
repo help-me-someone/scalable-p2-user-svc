@@ -35,6 +35,10 @@ func Target(path string) (string, error) {
 		return "", fmt.Errorf("failed to parse target host from path: %s", path)
 	}
 
+	if len(parts) < 3 {
+		parts = append(parts, "")
+	}
+
 	targetAddr := fmt.Sprintf(
 		"http://%s:%s/%s",
 		targetHost, targetPort, strings.Join(parts[2:], "/"),
