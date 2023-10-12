@@ -1,0 +1,5 @@
+http:
+  middlewares:
+    test-auth:
+      forwardAuth:
+        address: "http://localhost:7887/auth"

@@ -5,7 +5,6 @@ services:
     # The official v2 Traefik docker image
     image: traefik:v2.7
     # Enables the web UI and tells Traefik to listen to docker
-    command: --api.insecure=true --providers.docker
     ports:
       # The HTTP port
       - "80:80"
@@ -14,3 +13,5 @@ services:
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+          - "traefik.http.routers.my-service.middlewares=my-jwt-middleware@file"
