@@ -9,6 +9,7 @@ import (
 
 // For simplicity, we will just declare a secret here.
 // NOTE: For production, please remove this!
+// NOTE: This will become an env later.
 var jwtKey = []byte("my_secret_key")
 
 // For simplification let's have a user entry stored in memory.
@@ -21,16 +22,15 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/signin", SignInHanlder)
-	mux.HandleFunc("/welcome", AuthMiddleware(WelcomeHandler))
-	mux.HandleFunc("/refresh", AuthMiddleware(RefreshHandler))
+	mux.HandleFunc("/refresh", RefreshHandler)
 	mux.HandleFunc("/logout", LogoutHandler)
 	mux.HandleFunc("/auth", IsAuthHandler)
-	mux.HandleFunc("/", AuthMiddleware(ForwardHandler))
 
 	// start the server on port 7887
 	log.Println("Serving on port 7887")
 
 	handler := cors.New(cors.Options{
+		// NOTE(APPY): DON'T FORGET TO REMOVE THIS!
 		AllowedOrigins:   []string{"http://localhost:8000"},
 		AllowCredentials: true,
 		AllowedHeaders: []string{

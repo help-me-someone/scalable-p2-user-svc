@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -26,7 +25,6 @@ func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 	claims, err := ValidateJWTTOken(r)
 
 	if err != nil {
-		log.Println("INVALID USER!!!!!!!!!")
 		resp := map[string]interface{}{
 			"authenticated": false,
 		}
@@ -34,17 +32,27 @@ func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Valid user: %s\n", claims.Username)
-
 	resp := map[string]interface{}{
 		"authenticated": true,
 		"username":      claims.Username,
 	}
+
 	json.NewEncoder(w).Encode(resp)
 }
 
 func RefreshHandler(w http.ResponseWriter, r *http.Request) {
-	claims, _ := ValidateJWTTOken(r)
+	claims, err := ValidateJWTTOken(r)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		resp := map[string]interface{}{
+			"success": false,
+			"message": err.Error(),
+		}
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
 	// Only issue a new token once enough time has elapsed.
 	// In our case, we will renew when we're within 30 seconds
 	// of expiring.
@@ -99,6 +107,8 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 	creds.Username = r.FormValue("username")
 	creds.Password = r.FormValue("password")
 
+	log.Println("User", creds.Username, "attempting to log in...")
+
 	// If we can't get it from the form, then try JSON.
 	if len(creds.Password) == 0 || len(creds.Username) == 0 {
 		// Decode the request body into credentials.
@@ -121,6 +131,7 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 	// If the password exists AND it matches we can continue,
 	// else we return an "Unauthorized" access.
 	if !ok || expectedPassword != creds.Password {
+		log.Println("Unvalid login details")
 		w.WriteHeader(http.StatusUnauthorized)
 		resp := map[string]interface{}{
 			"success": false,
@@ -176,17 +187,6 @@ func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
 func ForwardHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 
-	target, err := Target(path)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
+	log.Println("Handling path:", path)
 
-	targetUrl, err := url.Parse(target)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	Proxy(targetUrl).ServeHTTP(w, r)
 }
