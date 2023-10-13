@@ -1,5 +1,13 @@
-http:
-  middlewares:
-    test-auth:
-      forwardAuth:
-        address: "http://localhost:7887/auth"
+log:
+  level: INFO
+
+api:
+  insecure: true
+  dashboard: true
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  docker: {}

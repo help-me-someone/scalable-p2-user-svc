@@ -1,7 +1,51 @@
 version: '3'
  
+volumes:
+  traefik-ssl-certs:
+    driver: local
+
 services:
-  reverse-proxy:
+  upload-svc:
+    build:
+      context: ./scalable-p2-video-uploading-service
+      dockerfile: Dockerfile
+    networks:
+      - back-office
+    depends_on:
+      - traefik
+    labels:
+      - traefik.http.routers.upload-svc.rule=Host(`upload-svc.localhost`)
+      - traefik.http.services.upload-svc.loadbalancer.server.port=7000
+      - traefik.http.routers.upload-svc.middlewares=test-auth
+
+  front-end:
+    build:
+      context: ./scalable-p2-frontend
+      dockerfile: Dockerfile
+    environment:
+      API_GATEWAY_URL: traefik
+      AUTH_URL: "auth.localhost"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - traefik
+    networks:
+      - front-office
+
+  auth:
+    build:
+      context: ./scalable-p2-api-gateway
+      dockerfile: Dockerfile
+    depends_on:
+      - traefik
+    networks:
+      - back-office
+      - front-office # Remove this later!! Frontend should be able to do basic auth.
+    labels:
+      - traefik.http.routers.auth.rule=Host(`auth.localhost`)
+      - traefik.http.services.auth.loadbalancer.server.port=7887
+
+  traefik:
     # The official v2 Traefik docker image
     image: traefik:v2.7
     # Enables the web UI and tells Traefik to listen to docker
@@ -12,6 +56,15 @@ services:
       - "8080:8080"
     volumes:
       # So that Traefik can listen to the Docker events
+      - ./:/etc/traefik
       - /var/run/docker.sock:/var/run/docker.sock
+      - traefik-ssl-certs:/ssl-certs
     labels:
-          - "traefik.http.routers.my-service.middlewares=my-jwt-middleware@file"
+      - "traefik.http.middlewares.test-auth.forwardauth.address=auth.localhost/auth"
+    networks:
+      - front-office
+      - back-office
+
+networks:
+  front-office: # frontend and api gateway
+  back-office: # backend microservices and api gateway
