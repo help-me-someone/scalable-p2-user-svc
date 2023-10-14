@@ -12,19 +12,7 @@ import (
 // Cookie lifetime, 15 minutes.
 const TOKEN_LIFE_TIME = 15
 
-func ValidateJWTTOken(r *http.Request) (*Claims, error) {
-	// Obtain the session token.
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		log.Println("The cookie does not exist")
-		return nil, err
-	}
-
-	// Get the JWT string from the cookie
-	tokenString := cookie.Value
-
-	log.Printf("Cookie: %s\n", tokenString)
-
+func ValidateRawJTWToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 
 	// Parse the JWT and store it inside claims.
@@ -44,6 +32,16 @@ func ValidateJWTTOken(r *http.Request) (*Claims, error) {
 	}
 
 	return claims, nil
+}
+
+func ValidateJWTTOken(r *http.Request) (*Claims, error) {
+	// Obtain the session token.
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		log.Println("The cookie does not exist")
+		return nil, err
+	}
+	return ValidateRawJTWToken(cookie.Value)
 }
 
 func CreateJWTToken(creds *Credentials) (string, time.Time, error) {

@@ -22,21 +22,46 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
-	claims, err := ValidateJWTTOken(r)
+	log.Println("Set cookie:", r.Header.Get("X-Custom-Header"))
+
+	cookie := r.Header.Get("X-Custom-Header")
+
+	if len(cookie) == 0 {
+		resp := map[string]interface{}{
+			"authenticated": false,
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	cookie = cookie[6:]
+
+	claims, err := ValidateRawJTWToken(cookie)
 
 	if err != nil {
 		resp := map[string]interface{}{
 			"authenticated": false,
 		}
+		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+
+	log.Println("User is authenticated!")
+
+	// Set username in the header.
+	r.Header.Set("username", claims.Username)
 
 	resp := map[string]interface{}{
 		"authenticated": true,
 		"username":      claims.Username,
 	}
 
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
 

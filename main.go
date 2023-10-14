@@ -42,9 +42,15 @@ func main() {
 			"Hx-Request",
 			"Hx-Trigger",
 			"Content-Type",
+			"X-Custom-Header",
+			"*",
 		},
 		AllowedMethods: []string{
 			"POST",
+			"GET",
+			"PUT",
+			"OPTIONS",
+			"*",
 		},
 
 		// Enable Debugging for testing, consider disabling in production
