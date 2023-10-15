@@ -22,7 +22,6 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Set cookie:", r.Header.Get("X-Custom-Header"))
 
 	cookie := r.Header.Get("X-Custom-Header")
 
@@ -53,8 +52,9 @@ func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("User is authenticated!")
 
-	// Set username in the header.
-	r.Header.Set("username", claims.Username)
+	// Set username in the response header
+	// so we can forward it to the request.
+	w.Header().Add("X-Username", claims.Username)
 
 	resp := map[string]interface{}{
 		"authenticated": true,
