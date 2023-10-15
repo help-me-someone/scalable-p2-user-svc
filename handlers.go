@@ -21,21 +21,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
-
-	cookie := r.Header.Get("X-Custom-Header")
-
-	if len(cookie) == 0 {
-		resp := map[string]interface{}{
-			"authenticated": false,
-		}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(resp)
-		return
-	}
-
-	cookie = cookie[6:]
-
+func CheckAuth(w http.ResponseWriter, cookie string) {
 	claims, err := ValidateRawJTWToken(cookie)
 
 	if err != nil {
@@ -63,6 +49,29 @@ func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func CustomHeaderCookieAuth(w http.ResponseWriter, r *http.Request) {
+	cookie := r.Header.Get("X-Custom-Header")
+	if len(cookie) > 6 {
+		cookie = cookie[6:]
+		CheckAuth(w, cookie)
+		return
+	}
+	resp := map[string]interface{}{
+		"authenticated": false,
+	}
+	w.WriteHeader(http.StatusUnauthorized)
+	json.NewEncoder(w).Encode(resp)
+	return
+}
+
+func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie("token"); err == nil {
+		CheckAuth(w, cookie.Value)
+	} else {
+		CustomHeaderCookieAuth(w, r)
+	}
 }
 
 func RefreshHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,9 +116,13 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set the new token cookie for the user.
 	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
-		Expires: expirationTime,
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+		Domain:   "http://tiktok.localhost",
+		Path:     "/",
 	})
 
 	resp := map[string]interface{}{
@@ -188,6 +201,8 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		Expires:  expirationTime,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
+		Domain:   "http://tiktok.localhost",
+		Path:     "/",
 	})
 
 	resp := map[string]interface{}{

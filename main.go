@@ -24,7 +24,7 @@ func main() {
 	mux.HandleFunc("/signin", SignInHanlder)
 	mux.HandleFunc("/refresh", RefreshHandler)
 	mux.HandleFunc("/logout", LogoutHandler)
-	mux.HandleFunc("/auth", IsAuthHandler)
+	mux.HandleFunc("/", IsAuthHandler)
 
 	// start the server on port 7887
 	log.Println("Serving on port 7887")
