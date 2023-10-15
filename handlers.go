@@ -1,3 +1,5 @@
+// TODO: Change X-Custom-Header, what kind of horrible naming is this.
+
 package main
 
 import (
@@ -66,6 +68,8 @@ func CustomHeaderCookieAuth(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// There are two different ways a cookie can be passed.
+// It's either via token or via "X-Custom-Header"
 func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie("token"); err == nil {
 		CheckAuth(w, cookie.Value)
