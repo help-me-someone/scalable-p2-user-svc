@@ -15,8 +15,14 @@ type Credentials struct {
 // Create a struct which will be encoded to a JWT.
 // Embedded registered claims. This provides us with fields like "Expire time", etc...
 type Claims struct {
-	Username string `json:"username" form:"username"`
+	Username string
 	jwt.RegisteredClaims
+}
+
+type RegistrationEntry struct {
+	Username        string
+	Password        string
+	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
 }
 
 type Handler = func(w http.ResponseWriter, r *http.Request)
