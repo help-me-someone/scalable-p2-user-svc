@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,9 +11,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/help-me-someone/scalable-p2-db/functions/crud"
-	"gorm.io/gorm"
+	"github.com/help-me-someone/scalable-p2-db/models/user"
 )
+
+func FailResponse(w http.ResponseWriter, status int, message string) {
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": false,
+		"message": message,
+	})
+}
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -41,8 +49,6 @@ func CheckAuth(w http.ResponseWriter, cookie string) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
-
-	log.Println("User is authenticated!")
 
 	// Set username in the response header
 	// so we can forward it to the request.
@@ -141,11 +147,7 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the request is valid.
 	if r.Method != "POST" && r.Method != "OPTIONS" {
-		http.NotFound(w, r)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Invalid method.",
-		})
+		FailResponse(w, http.StatusNotFound, "Invalid method.")
 		return
 	}
 
@@ -159,50 +161,46 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		// Decode the request body into credentials.
 		err := json.NewDecoder(r.Body).Decode(&creds)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			response.Encode(map[string]interface{}{
-				"success": false,
-				"message": "Unable to locate credentials.",
-			})
+			FailResponse(w, http.StatusBadRequest, "Unable to locate credentials.")
 			return
 		}
+	}
+
+	if len(creds.Password) == 0 || len(creds.Username) == 0 {
+		FailResponse(w, http.StatusUnauthorized, "Invalid username/password.")
+		return
 	}
 
 	// Make the username case insensitive.
 	creds.Username = strings.ToLower(creds.Username)
 
-	// Get the database connection which should have
-	// been added by the database middleware.
-	conn, ok := r.Context().Value("conn").(*gorm.DB)
-	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Failed to retrieve the database connection.",
-		})
+	// Get the user info.
+	resp, err := http.Get(fmt.Sprintf("http://db-svc:8083/user/%s", creds.Username))
+	if err != nil {
+		log.Println(err)
+		FailResponse(w, http.StatusInternalServerError, fmt.Sprintf("Get user request failed. %s", err))
+		return
+	}
+	defer resp.Body.Close()
+
+	getResponse := struct {
+		Success bool      `json:"success"`
+		Message string    `json:"message"`
+		User    user.User `json:"user"`
+	}{}
+
+	err = json.NewDecoder(resp.Body).Decode(&getResponse)
+	if err != nil {
+		FailResponse(w, http.StatusBadRequest, "Could not get user information.")
 		return
 	}
 
-	// Get the expected user.
-	usr, err := crud.GetUserByName(conn, creds.Username)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Invalid username/password.",
-		})
-		return
-	}
+	hashedPassword := getResponse.User.HashedPassword
 
 	// If the password exists AND it matches we can continue,
 	// else we return an "Unauthorized" access.
-	if !CheckPasswordHash(creds.Password, usr.HashedPassword) {
-		log.Println("Unvalid login details")
-		w.WriteHeader(http.StatusUnauthorized)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Invalid username/password.",
-		})
+	if !CheckPasswordHash(creds.Password, hashedPassword) {
+		FailResponse(w, http.StatusUnauthorized, "Invalid username/password.")
 		return
 	}
 
@@ -211,11 +209,7 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		// Error creating a JWT token, internal server error.
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Failed to create token.",
-		})
+		FailResponse(w, http.StatusInternalServerError, "Failed to create token.")
 		return
 	}
 
@@ -231,16 +225,14 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	resp := map[string]interface{}{
+	successResponse := map[string]interface{}{
 		"success": true,
 		"message": "logged in",
 		"user":    creds.Username,
 		"cookie":  tokenString,
 	}
 
-	log.Printf("User logged in: %s\n", creds.Username)
-
-	response.Encode(resp)
+	response.Encode(successResponse)
 }
 
 // RegisterHanlder deals with the registration of a user.
@@ -249,22 +241,13 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the method is POST.
 	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Invalid method.",
-		})
+		FailResponse(w, http.StatusMethodNotAllowed, "Invalid method.")
 		return
 	}
 
 	re := RegistrationEntry{}
-
 	if err := json.NewDecoder(r.Body).Decode(&re); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Failed to decode entry.",
-		})
+		FailResponse(w, http.StatusBadRequest, "Failed to decode entry.")
 		return
 	}
 
@@ -279,21 +262,13 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the username and password is provided.
 	if usernameEmpty || passwordEmpty || confirmPasswordEmpty {
-		w.WriteHeader(http.StatusBadRequest)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Username/password missing.",
-		})
+		FailResponse(w, http.StatusBadRequest, "Username/password mising.")
 		return
 	}
 
 	// Make sure the password and confirmPassword matches.
 	if password != confirmPassword {
-		w.WriteHeader(http.StatusBadRequest)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Password does not match.",
-		})
+		FailResponse(w, http.StatusBadRequest, "Password does not match.")
 		return
 	}
 
@@ -302,27 +277,30 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get the database connection which should have
 	// been added by the database middleware.
-	conn, ok := r.Context().Value("conn").(*gorm.DB)
-	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Failed to retrieve the database connection.",
-		})
+	resp, err := http.Get(fmt.Sprintf("http://db-svc:8083/user/%s", username))
+	if err != nil {
+		log.Println(err)
+		FailResponse(w, http.StatusInternalServerError, fmt.Sprintf("Get user request failed. %s", err))
 		return
 	}
+	defer resp.Body.Close()
 
 	// Check if the user alreay exists within the database.
 	// A little unorthodox but we can check by seeing whether we
 	// get the expected error or not. We expect RecordNotFound.
-	_, err := crud.GetUserByName(conn, username)
-	if err != gorm.ErrRecordNotFound {
+
+	getResponse := struct {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+	}{}
+	if err = json.NewDecoder(resp.Body).Decode(&getResponse); err != nil {
+		FailResponse(w, http.StatusBadRequest, "Failed to decode reponse from get user.")
+		return
+	}
+
+	if getResponse.Message != "User not found." {
 		// This means that the user already exists.
-		w.WriteHeader(http.StatusBadRequest)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "User already exists.",
-		})
+		FailResponse(w, http.StatusBadRequest, "User already exists.")
 		return
 	}
 
@@ -333,30 +311,49 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	password, err = HashPassword(password)
 	if err != nil {
 		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Failed to hash password.",
-		})
+		FailResponse(w, http.StatusBadRequest, "Failed to hash password.")
 		return
 	}
 
 	// Create the new entry.
-	_, err = crud.CreateUser(conn, username, password)
+	var buf bytes.Buffer
+	json.NewEncoder(&buf).Encode(map[string]interface{}{
+		"username":        username,
+		"hashed_password": password,
+	})
+
+	// Ask the database service to create the user.
+	resp, err = http.Post("http://db-svc:8083/user", "application/json", &buf)
 	if err != nil {
 		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Encode(map[string]interface{}{
-			"success": false,
-			"message": "Failed to create user.",
-		})
+		FailResponse(w, http.StatusInternalServerError, "Create user request failed.")
 		return
-	} else {
+	}
+	defer resp.Body.Close()
+
+	// Check the creation response.
+	createResp := struct {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+	}{}
+
+	err = json.NewDecoder(resp.Body).Decode(&createResp)
+	if err != nil {
+		log.Println(err)
+		FailResponse(w, http.StatusInternalServerError, "Failed to decode creation response.")
+		return
+	}
+
+	if createResp.Success {
 		log.Println("Successfully created user", username)
 		response.Encode(map[string]interface{}{
 			"success": true,
 			"message": "User successfully created.",
 		})
+		return
+	} else {
+		log.Println(createResp.Message)
+		FailResponse(w, http.StatusInternalServerError, "Failed to create user.")
 	}
 }
 
@@ -364,12 +361,4 @@ func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
 	// Login successful!
 	claims, _ := ValidateJWTTOken(r)
 	w.Write([]byte(fmt.Sprintf("Welcome %s!", claims.Username)))
-}
-
-// This is a reverse proxy.
-func ForwardHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-
-	log.Println("Handling path:", path)
-
 }

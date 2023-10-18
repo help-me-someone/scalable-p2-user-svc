@@ -4,11 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	db "github.com/help-me-someone/scalable-p2-db"
-	"github.com/help-me-someone/scalable-p2-db/models/user"
 	"github.com/rs/cors"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 // For simplicity, we will just declare a secret here.
@@ -23,26 +19,10 @@ var users = map[string]string{
 }
 
 func main() {
-	// TODO: Load this via environments.
-	dsn := "user:password@tcp(mysql:3306)/toktik-db?charset=utf8mb4&parseTime=True&loc=Local"
-
-	toktik_db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Panic(err)
-	} else {
-		// We only initialize the table if it doesn't already exist.
-		// This should not really impact performance since it only checks
-		// during start up.
-		if !toktik_db.Migrator().HasTable(&user.User{}) {
-			db.InitUserTable(toktik_db)
-			log.Println("Database initialized!")
-		}
-	}
-
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/signin", DatabaseConnectionMiddleware(dsn, SignInHanlder))
-	mux.HandleFunc("/signup", DatabaseConnectionMiddleware(dsn, SignUpHandler))
+	mux.HandleFunc("/signin", SignInHanlder)
+	mux.HandleFunc("/signup", SignUpHandler)
 	mux.HandleFunc("/refresh", RefreshHandler)
 	mux.HandleFunc("/logout", LogoutHandler)
 	mux.HandleFunc("/", IsAuthHandler)
