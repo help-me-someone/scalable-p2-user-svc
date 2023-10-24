@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/rs/cors"
 )
@@ -18,9 +19,18 @@ var users = map[string]string{
 	"user2@gmail.com": "password2",
 }
 
-func main() {
-	mux := http.NewServeMux()
+var ALLOWED_ORIGIN string
 
+func loadEnvs() {
+	ALLOWED_ORIGIN = os.Getenv("ALLOWED_ORIGIN")
+}
+
+func main() {
+
+	// Retrieve all environment variables.
+	loadEnvs()
+
+	mux := http.NewServeMux()
 	mux.HandleFunc("/signin", SignInHanlder)
 	mux.HandleFunc("/signup", SignUpHandler)
 	mux.HandleFunc("/refresh", RefreshHandler)
@@ -32,7 +42,7 @@ func main() {
 
 	handler := cors.New(cors.Options{
 		// NOTE(APPY): DON'T FORGET TO REMOVE THIS!
-		AllowedOrigins:   []string{"http://localhost:8000"},
+		AllowedOrigins:   []string{ALLOWED_ORIGIN},
 		AllowCredentials: true,
 		AllowedHeaders: []string{
 			"Hx-Current-Url",
