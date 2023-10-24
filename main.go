@@ -31,11 +31,11 @@ func main() {
 	loadEnvs()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/signin", SignInHanlder)
-	mux.HandleFunc("/signup", SignUpHandler)
-	mux.HandleFunc("/refresh", RefreshHandler)
-	mux.HandleFunc("/logout", LogoutHandler)
-	mux.HandleFunc("/", IsAuthHandler)
+	mux.HandleFunc("auth/signin", SignInHanlder)
+	mux.HandleFunc("auth/signup", SignUpHandler)
+	mux.HandleFunc("auth/refresh", RefreshHandler)
+	mux.HandleFunc("auth/logout", LogoutHandler)
+	mux.HandleFunc("auth/", IsAuthHandler)
 
 	// start the server on port 7887
 	log.Println("Serving on port 7887")
