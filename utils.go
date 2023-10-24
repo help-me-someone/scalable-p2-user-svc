@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -22,6 +23,7 @@ func GetDatabaseConnection(username, password, server string) (*gorm.DB, error) 
 			password,
 			server,
 		)
+		log.Println("Attemping to get:", dsn)
 		connection, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 		if err != nil {
 			return nil, err
