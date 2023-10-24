@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/help-me-someone/scalable-p2-db/models/user"
+	"github.com/help-me-someone/scalable-p2-db/functions/crud"
 )
 
 func FailResponse(w http.ResponseWriter, status int, message string) {
@@ -59,6 +58,7 @@ func CheckAuth(w http.ResponseWriter, cookie string) {
 		"username":      claims.Username,
 	}
 
+	log.Println("Ok.")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
@@ -81,6 +81,7 @@ func CustomHeaderCookieAuth(w http.ResponseWriter, r *http.Request) {
 // There are two different ways a cookie can be passed.
 // It's either via token or via "X-Custom-Header"
 func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Checking auth.")
 	if cookie, err := r.Cookie("token"); err == nil {
 		CheckAuth(w, cookie.Value)
 	} else {
@@ -175,27 +176,15 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 	creds.Username = strings.ToLower(creds.Username)
 
 	// Get the user info.
-	resp, err := http.Get(fmt.Sprintf("http://db-svc:8083/user/%s", creds.Username))
+	connection, _ := GetDatabaseConnection(DB_USERNAME, DB_PASSWORD, DB_IP)
+	usr, err := crud.GetUserByName(connection, creds.Username)
 	if err != nil {
 		log.Println(err)
-		FailResponse(w, http.StatusInternalServerError, fmt.Sprintf("Get user request failed. %s", err))
-		return
-	}
-	defer resp.Body.Close()
-
-	getResponse := struct {
-		Success bool      `json:"success"`
-		Message string    `json:"message"`
-		User    user.User `json:"user"`
-	}{}
-
-	err = json.NewDecoder(resp.Body).Decode(&getResponse)
-	if err != nil {
-		FailResponse(w, http.StatusBadRequest, "Could not get user information.")
+		FailResponse(w, http.StatusInternalServerError, "Invalid username/password.")
 		return
 	}
 
-	hashedPassword := getResponse.User.HashedPassword
+	hashedPassword := usr.HashedPassword
 
 	// If the password exists AND it matches we can continue,
 	// else we return an "Unauthorized" access.
@@ -275,37 +264,18 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	// Make the username name case insensitive.
 	username = strings.ToLower(username)
 
-	// Get the database connection which should have
-	// been added by the database middleware.
-	resp, err := http.Get(fmt.Sprintf("http://db-svc:8083/user/%s", username))
-	if err != nil {
-		log.Println(err)
-		FailResponse(w, http.StatusInternalServerError, fmt.Sprintf("Get user request failed. %s", err))
+	connection, _ := GetDatabaseConnection(DB_USERNAME, DB_PASSWORD, DB_IP)
+
+	// Make sure the user doesn't already exists.
+	_, err := crud.GetUserByName(connection, username)
+	if err != nil && err.Error() != "record not found" {
+		FailResponse(w, http.StatusInternalServerError, "Something went wrong.")
 		return
 	}
-	defer resp.Body.Close()
 
 	// Check if the user alreay exists within the database.
 	// A little unorthodox but we can check by seeing whether we
 	// get the expected error or not. We expect RecordNotFound.
-
-	getResponse := struct {
-		Success bool   `json:"success"`
-		Message string `json:"message"`
-	}{}
-	if err = json.NewDecoder(resp.Body).Decode(&getResponse); err != nil {
-		FailResponse(w, http.StatusBadRequest, "Failed to decode reponse from get user.")
-		return
-	}
-
-	if getResponse.Message != "User not found." {
-		// This means that the user already exists.
-		FailResponse(w, http.StatusBadRequest, "User already exists.")
-		return
-	}
-
-	// If reach this line it means that we are now ready to make a new
-	// record for the user.
 
 	// Prepare the password.
 	password, err = HashPassword(password)
@@ -315,46 +285,19 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the new entry.
-	var buf bytes.Buffer
-	json.NewEncoder(&buf).Encode(map[string]interface{}{
-		"username":        username,
-		"hashed_password": password,
-	})
-
-	// Ask the database service to create the user.
-	resp, err = http.Post("http://db-svc:8083/user", "application/json", &buf)
+	// Create the user.
+	_, err = crud.CreateUser(connection, username, password)
 	if err != nil {
 		log.Println(err)
-		FailResponse(w, http.StatusInternalServerError, "Create user request failed.")
-		return
-	}
-	defer resp.Body.Close()
-
-	// Check the creation response.
-	createResp := struct {
-		Success bool   `json:"success"`
-		Message string `json:"message"`
-	}{}
-
-	err = json.NewDecoder(resp.Body).Decode(&createResp)
-	if err != nil {
-		log.Println(err)
-		FailResponse(w, http.StatusInternalServerError, "Failed to decode creation response.")
-		return
-	}
-
-	if createResp.Success {
-		log.Println("Successfully created user", username)
-		response.Encode(map[string]interface{}{
-			"success": true,
-			"message": "User successfully created.",
-		})
-		return
-	} else {
-		log.Println(createResp.Message)
 		FailResponse(w, http.StatusInternalServerError, "Failed to create user.")
+		return
 	}
+
+	log.Println("Successfully created user", username)
+	response.Encode(map[string]interface{}{
+		"success": true,
+		"message": "User successfully created.",
+	})
 }
 
 func WelcomeHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,12 +1,15 @@
-FROM golang:1.18
-WORKDIR /usr/src/app
+FROM golang:1.18 AS BuildStage
 
-COPY go.mod go.sum ./
-
-RUN go mod download && go mod verify
+WORKDIR /app
 
 COPY . .
 
-RUN go build -o server
+RUN CGO_ENABLED=0 GOOS=linux go build -o app ./...
 
-CMD [ "./server" ]
+FROM alpine:latest AS production
+
+COPY --from=BuildStage /app .
+
+CMD ["./app"]
+
+ 
