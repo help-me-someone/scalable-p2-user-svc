@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	db "github.com/help-me-someone/scalable-p2-db"
+	"github.com/help-me-someone/scalable-p2-db/models/user"
+	"github.com/help-me-someone/scalable-p2-db/models/video"
 	"github.com/rs/cors"
 )
 
@@ -34,9 +37,15 @@ func loadEnvs() {
 }
 
 func main() {
-
 	// Retrieve all environment variables.
 	loadEnvs()
+
+	// Initalize the database.
+	toktik_db, _ := GetDatabaseConnection(DB_USERNAME, DB_PASSWORD, DB_IP)
+	if !toktik_db.Migrator().HasTable(&user.User{}) && !toktik_db.Migrator().HasTable(&video.Video{}) {
+		db.InitTables(toktik_db)
+		log.Println("Database initialized!")
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/signin", SignInHanlder)
