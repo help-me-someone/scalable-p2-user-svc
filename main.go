@@ -19,10 +19,18 @@ var users = map[string]string{
 	"user2@gmail.com": "password2",
 }
 
-var ALLOWED_ORIGIN string
+var (
+	ALLOWED_ORIGIN string
+	DB_USERNAME    string
+	DB_PASSWORD    string
+	DB_IP          string
+)
 
 func loadEnvs() {
 	ALLOWED_ORIGIN = os.Getenv("ALLOWED_ORIGIN")
+	DB_USERNAME = os.Getenv("DB_USERNAME")
+	DB_PASSWORD = os.Getenv("DB_PASSWORD")
+	DB_IP = os.Getenv("DB_IP")
 }
 
 func main() {

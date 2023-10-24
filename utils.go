@@ -8,10 +8,7 @@ import (
 )
 
 const (
-	region      = "sgp1"
-	DB_USERNAME = "user"
-	DB_PASSWORD = "password"
-	DB_IP       = "mysql:3306"
+	region = "sgp1"
 )
 
 // gorm.DB objects are meant to be reused.
