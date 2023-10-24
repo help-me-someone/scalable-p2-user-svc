@@ -39,6 +39,7 @@ func main() {
 
 	// start the server on port 7887
 	log.Println("Serving on port 7887")
+	log.Printf("Allowed origin: %s", ALLOWED_ORIGIN)
 
 	handler := cors.New(cors.Options{
 		// NOTE(APPY): DON'T FORGET TO REMOVE THIS!
