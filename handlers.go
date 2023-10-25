@@ -81,6 +81,12 @@ func CustomHeaderCookieAuth(w http.ResponseWriter, r *http.Request) {
 // There are two different ways a cookie can be passed.
 // It's either via token or via "X-Custom-Header"
 func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		log.Println("Handling options")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	log.Println("Caught by auth:", r.URL.String())
 	if cookie, err := r.Cookie("token"); err == nil {
 		CheckAuth(w, cookie.Value)
