@@ -59,7 +59,6 @@ func main() {
 	log.Printf("Allowed origin: %s", ALLOWED_ORIGIN)
 
 	handler := cors.New(cors.Options{
-		// NOTE(APPY): DON'T FORGET TO REMOVE THIS!
 		AllowedOrigins:   []string{ALLOWED_ORIGIN},
 		AllowCredentials: true,
 		AllowedHeaders: []string{

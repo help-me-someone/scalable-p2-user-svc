@@ -131,7 +131,7 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  expirationTime,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		Domain:   "http://tiktok.localhost",
+		Domain:   "toktik.localhost",
 		Path:     "/",
 	})
 
@@ -210,7 +210,7 @@ func SignInHanlder(w http.ResponseWriter, r *http.Request) {
 		Expires:  expirationTime,
 		Secure:   true,
 		SameSite: http.SameSiteNoneMode,
-		Domain:   "http://tiktok.localhost",
+		Domain:   "toktik.localhost",
 		Path:     "/",
 	})
 
