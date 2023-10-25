@@ -65,8 +65,11 @@ func CustomHeaderCookieAuth(w http.ResponseWriter, r *http.Request) {
 	if len(cookie) > 6 {
 		cookie = cookie[6:]
 		CheckAuth(w, cookie)
+		log.Println("Okay found cookie.")
 		return
 	}
+	log.Println("Wait where the cookie at?")
+
 	resp := map[string]interface{}{
 		"authenticated": false,
 	}
@@ -80,10 +83,8 @@ func CustomHeaderCookieAuth(w http.ResponseWriter, r *http.Request) {
 func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Caught by auth:", r.URL.String())
 	if cookie, err := r.Cookie("token"); err == nil {
-		log.Println("Checking cookie")
 		CheckAuth(w, cookie.Value)
 	} else {
-		log.Println("Checking custom header")
 		CustomHeaderCookieAuth(w, r)
 	}
 }
