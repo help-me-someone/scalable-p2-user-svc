@@ -46,9 +46,6 @@ func CheckAuth(w http.ResponseWriter, cookie string) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-
 	// Set username in the response header
 	// so we can forward it to the request.
 	w.Header().Add("X-Username", claims.Username)
@@ -83,8 +80,10 @@ func CustomHeaderCookieAuth(w http.ResponseWriter, r *http.Request) {
 func IsAuthHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Caught by auth:", r.URL.String())
 	if cookie, err := r.Cookie("token"); err == nil {
+		log.Println("Checking cookie")
 		CheckAuth(w, cookie.Value)
 	} else {
+		log.Println("Checking custom header")
 		CustomHeaderCookieAuth(w, r)
 	}
 }
