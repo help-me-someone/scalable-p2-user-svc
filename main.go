@@ -58,34 +58,32 @@ func main() {
 	log.Println("Serving on port 7887")
 	log.Printf("Allowed origin: %s", ALLOWED_ORIGIN)
 
-	// handler := cors.New(cors.Options{
-	// 	AllowedOrigins:   []string{ALLOWED_ORIGIN},
-	// 	AllowCredentials: true,
-	// 	AllowedHeaders: []string{
-	// 		"Hx-Current-Url",
-	// 		"Hx-Request",
-	// 		"Hx-Target",
-	// 		"Hx-Boosted",
-	// 		"Hx-Current-Url",
-	// 		"Hx-Request",
-	// 		"Hx-Trigger",
-	// 		"Content-Type",
-	// 		"X-Custom-Header",
-	// 		"*",
-	// 	},
-	// 	AllowedMethods: []string{
-	// 		"POST",
-	// 		"GET",
-	// 		"PUT",
-	// 		"OPTIONS",
-	// 		"*",
-	// 	},
+	handler := cors.New(cors.Options{
+		AllowedOrigins:   []string{ALLOWED_ORIGIN},
+		AllowCredentials: true,
+		AllowedHeaders: []string{
+			"Hx-Current-Url",
+			"Hx-Request",
+			"Hx-Target",
+			"Hx-Boosted",
+			"Hx-Current-Url",
+			"Hx-Request",
+			"Hx-Trigger",
+			"Content-Type",
+			"X-Custom-Header",
+			"*",
+		},
+		AllowedMethods: []string{
+			"POST",
+			"GET",
+			"PUT",
+			"OPTIONS",
+			"*",
+		},
 
-	// 	// Enable Debugging for testing, consider disabling in production
-	// 	Debug: true,
-	// }).Handler(mux)
-
-	handler := cors.Default().Handler(mux)
+		// Enable Debugging for testing, consider disabling in production
+		Debug: true,
+	}).Handler(mux)
 
 	log.Fatal(http.ListenAndServe(":7887", handler))
 }
