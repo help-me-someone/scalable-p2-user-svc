@@ -270,7 +270,6 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make the username name case insensitive.
 	username = strings.ToLower(username)
-
 	connection, _ := GetDatabaseConnection(DB_USERNAME, DB_PASSWORD, DB_IP)
 
 	// Make sure the user doesn't already exists.

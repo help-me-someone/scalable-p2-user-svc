@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.0.0
-	github.com/help-me-someone/scalable-p2-db v0.0.0-20231024132804-913e7f22fc66
+	github.com/help-me-someone/scalable-p2-db v0.0.0-20231113170922-dbee0cb9c1d4
 	github.com/rs/cors v1.10.1
 	golang.org/x/crypto v0.14.0
 	gorm.io/driver/mysql v1.5.2
